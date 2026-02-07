@@ -189,7 +189,7 @@ const App: React.FC = () => {
           </Accordion>
 
           <Accordion title="Visualização Wave" defaultExpanded icon={<WaveIcon />}>
-            <div className="bg-white rounded-2xl p-4 -m-4">
+            <div className="bg-white rounded-2xl p-4 -m-4 min-h-[300px]">
               <WaveFunnel data={waveData} />
             </div>
           </Accordion>
