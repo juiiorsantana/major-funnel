@@ -20,10 +20,13 @@ export interface FunnelState {
   // Financial metrics
   ticketMedio: number;
   saleRate: number;
-  sales: number;
+  salesRaw: number; // Raw sales value before rounding (for debug)
+  sales: number;    // Rounded sales (floor) - used for all calculations
   revenue: number;
   totalInvestment: number; // Investimento total (Ads + Custos de Conversas)
+  profit: number;   // Revenue - Investment
   roas: number;
+  roi: number;      // (Profit / Investment) * 100
   cpa: number;
 }
 

@@ -7,6 +7,8 @@ import { WaveFunnel } from './components/WaveFunnel';
 import { InputPanel } from './components/InputPanel';
 import { FinancialSummary } from './components/FinancialSummary';
 import { Header } from './components/Header';
+import { Accordion } from './components/Accordion';
+import { calculateFunnelMetrics } from './engine/WaveCalculatorEngine';
 
 const App: React.FC = () => {
   const [campaignType, setCampaignType] = useState<CampaignType>('site');
@@ -22,53 +24,16 @@ const App: React.FC = () => {
   });
 
   const state: FunnelState = useMemo(() => {
-    const { investment, cpm, ctr, connectRate, conversationRate, conversionRate, saleRate, ticketMedio } = inputs;
-
-    const impressions = cpm > 0 ? (investment / cpm) * 1000 : 0;
-    const clicks = impressions * (ctr / 100);
-
-    // Conditional calculation based on campaign type
-    let pageViews: number;
-    let conversations: number;
-    let costPerConversation: number;
-    let leads: number;
-
-    if (campaignType === 'site') {
-      // SITE: Cliques → Views → Leads
-      pageViews = clicks * (connectRate / 100);
-      conversations = 0; // Não aplicável para SITE
-      costPerConversation = 0; // Não aplicável para SITE
-      leads = pageViews * (conversionRate / 100);
-    } else {
-      // WHATSAPP: Cliques → Conversas Iniciadas → Leads
-      pageViews = 0; // Não aplicável para WhatsApp
-      conversations = clicks * (conversationRate / 100);
-      // Custo por conversa é CALCULADO: investimento / conversas
-      costPerConversation = conversations > 0 ? investment / conversations : 0;
-      leads = conversations * (conversionRate / 100);
-    }
-
-    const cpl = leads > 0 ? investment / leads : 0;
-
-    const sales = leads * (saleRate / 100);
-    const revenue = sales * ticketMedio;
-    const roas = investment > 0 ? revenue / investment : 0;
-    const cpa = sales > 0 ? investment / sales : 0;
+    // CALCULATION ENGINE: Single Source of Truth
+    // All metrics calculated by wave-calculator-engine
+    const result = calculateFunnelMetrics({
+      campaignType,
+      ...inputs,
+    });
 
     return {
-      ...inputs,
-      impressions,
-      clicks,
-      pageViews,
-      conversations,
-      costPerConversation, // Agora é calculado, não input
-      leads,
-      cpl,
-      sales,
-      revenue,
-      totalInvestment: investment, // totalInvestment = investment (sem custo adicional)
-      roas,
-      cpa
+      // Return engine output as FunnelState
+      ...result,
     };
   }, [inputs, campaignType]);
 
@@ -121,12 +86,31 @@ const App: React.FC = () => {
     return metricIds.map(id => getMetric(id as MetricType));
   }, [campaignType]);
 
+  // Icons for accordions
+  const ChartIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  );
+
+  const WaveIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+    </svg>
+  );
+
+  const MoneyIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-sky-50/30 to-slate-100 overflow-hidden font-sans text-slate-900 selection:bg-tech-200">
       <Header state={state} onReset={handleReset} />
 
-      {/* Main Layout */}
-      <main className="flex-1 p-4 grid grid-cols-12 gap-4 overflow-hidden">
+      {/* Main Layout - Mobile: vertical stack, Desktop: grid */}
+      <main className="flex-1 p-3 lg:p-4 flex flex-col gap-3 lg:grid lg:grid-cols-12 lg:gap-4 overflow-y-auto lg:overflow-hidden">
 
         <InputPanel
           state={state}
@@ -135,8 +119,8 @@ const App: React.FC = () => {
           onCampaignTypeChange={setCampaignType}
         />
 
-        {/* Dashboard Content */}
-        <section className="col-span-12 lg:col-span-9 flex flex-col gap-4 overflow-hidden">
+        {/* DESKTOP: Dashboard Content (original layout) */}
+        <section className="hidden lg:flex col-span-12 lg:col-span-9 flex-col gap-4 overflow-hidden">
 
           {/* Quick Metrics (Row) */}
           <motion.div
@@ -186,10 +170,39 @@ const App: React.FC = () => {
             <FinancialSummary state={state} campaignType={campaignType} />
           </div>
         </section>
+
+        {/* MOBILE: Accordion-based sections */}
+        <div className="flex flex-col gap-3 lg:hidden">
+
+          <Accordion title="Métricas do Funil" defaultExpanded icon={<ChartIcon />}>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {intermediateMetrics.map((config) => (
+                <MetricCard
+                  key={config.id}
+                  config={config}
+                  value={state[config.id as keyof FunnelState]}
+                  isResult={config.id === 'sales'}
+                  compact
+                />
+              ))}
+            </div>
+          </Accordion>
+
+          <Accordion title="Visualização Wave" defaultExpanded icon={<WaveIcon />}>
+            <div className="bg-white rounded-2xl p-4 -m-4">
+              <WaveFunnel data={waveData} />
+            </div>
+          </Accordion>
+
+          <Accordion title="Resumo Financeiro" defaultExpanded icon={<MoneyIcon />}>
+            <FinancialSummary state={state} campaignType={campaignType} />
+          </Accordion>
+
+        </div>
       </main>
 
-      {/* Premium Footer */}
-      <footer className="px-8 py-3 bg-white/80 backdrop-blur-sm border-t border-slate-200/60 flex justify-between items-center shrink-0 z-30">
+      {/* Premium Footer - Hidden on mobile */}
+      <footer className="hidden sm:flex px-8 py-3 bg-white/80 backdrop-blur-sm border-t border-slate-200/60 justify-between items-center shrink-0 z-30">
         <div className="flex items-center space-x-3">
           <div className="relative">
             <span className="w-2 h-2 bg-neon-500 rounded-full animate-pulse block"></span>

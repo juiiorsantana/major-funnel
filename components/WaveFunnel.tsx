@@ -13,9 +13,15 @@ interface WaveFunnelProps {
 }
 
 export const WaveFunnel: React.FC<WaveFunnelProps> = ({ data }) => {
-  const width = 800;
-  const height = 400;
-  const padding = 60;
+  // Responsive dimensions - smaller on mobile
+  const useResponsiveDimensions = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    return isMobile
+      ? { width: 600, height: 250, padding: 40 }
+      : { width: 800, height: 400, padding: 60 };
+  };
+
+  const { width, height, padding } = useResponsiveDimensions();
   const innerWidth = width - padding * 2;
   const centerY = height / 2;
 
@@ -140,6 +146,7 @@ export const WaveFunnel: React.FC<WaveFunnelProps> = ({ data }) => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
               transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.2 }}
+              className="hidden lg:block"
             />
 
             {/* Middle ring */}
@@ -150,7 +157,7 @@ export const WaveFunnel: React.FC<WaveFunnelProps> = ({ data }) => {
               stroke="white"
               strokeWidth={2}
               fill="transparent"
-              className="opacity-40 group-hover:opacity-70 transition-opacity duration-300"
+              className="opacity-40 group-hover:opacity-70 transition-opacity duration-300 hidden lg:block"
             />
 
             {/* Core node with gradient */}
@@ -169,7 +176,7 @@ export const WaveFunnel: React.FC<WaveFunnelProps> = ({ data }) => {
               fill={getStageColor(i)}
             />
 
-            {/* Always visible value (above node) */}
+            {/* Always visible value (above node) - Responsive sizing */}
             <g className="transition-all duration-300">
               <rect
                 x={p.x - 45}
@@ -196,28 +203,28 @@ export const WaveFunnel: React.FC<WaveFunnelProps> = ({ data }) => {
                 x={p.x}
                 y={centerY - p.thickness / 2 - 23}
                 textAnchor="middle"
-                className="text-[13px] font-black fill-white tracking-tight"
+                className="text-[11px] lg:text-[13px] font-black fill-white tracking-tight"
               >
                 {p.value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               </text>
             </g>
 
-            {/* Stage Name (Bottom) */}
+            {/* Stage Name (Bottom) - Responsive sizing */}
             <text
               x={p.x}
               y={height - 15}
               textAnchor="middle"
-              className="text-[12px] font-black uppercase tracking-[0.15em] fill-slate-500 group-hover:fill-tech-600 transition-colors duration-300"
+              className="text-[10px] lg:text-[12px] font-black uppercase tracking-[0.15em] fill-slate-500 group-hover:fill-tech-600 transition-colors duration-300"
             >
               {p.name}
             </text>
 
-            {/* Stage Label (Below name) */}
+            {/* Stage Label (Below name) - Hidden on mobile for simplicity */}
             <text
               x={p.x}
               y={height - 2}
               textAnchor="middle"
-              className="text-[8px] font-bold uppercase tracking-widest fill-slate-300"
+              className="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest fill-slate-300 hidden sm:block"
             >
               {p.label}
             </text>
